@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build API Gateway
+        uses: docker/build-push-action@v6
+        with:
+          context: ./services/api-gateway
+          push: false
+          tags: nivaro/api-gateway:ci
+      - name: Build User Service
+        uses: docker/build-push-action@v6
+        with:
+          context: ./services/user-service
+          push: false
+          tags: nivaro/user-service:ci
+      - name: Build Booking Service
+        uses: docker/build-push-action@v6
+        with:
+          context: ./services/booking-service
+          push: false
+          tags: nivaro/booking-service:ci
+      - name: Build Notification Service
+        uses: docker/build-push-action@v6
+        with:
+          context: ./services/notification-service
+          push: false
+          tags: nivaro/notification-service:ci
+      - name: Build Frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          push: false
+          tags: nivaro/frontend:ci

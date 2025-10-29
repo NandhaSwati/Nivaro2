@@ -1,0 +1,12 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --brand: 34 197 94; /* not used now but future */
+}
+
+/***** Components *****/
+.card { @apply bg-white rounded-xl shadow-sm p-4 border border-slate-200; }
+.btn { @apply inline-flex items-center justify-center px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 text-sm font-semibold; }
+.input { @apply w-full rounded-md border-slate-300 focus:border-blue-500 focus:ring-blue-500; }

@@ -1,0 +1,58 @@
+name: CD
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  push-images:
+    runs-on: ubuntu-latest
+    env:
+      REGISTRY: docker.io
+      IMAGE_PREFIX: ${{ secrets.DOCKERHUB_USERNAME }}/nivaro
+    steps:
+      - uses: actions/checkout@v4
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build and push API Gateway
+        uses: docker/build-push-action@v6
+        with:
+          context: ./services/api-gateway
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-api-gateway:${{ github.ref_name }}
+      - name: Build and push User Service
+        uses: docker/build-push-action@v6
+        with:
+          context: ./services/user-service
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-user:${{ github.ref_name }}
+      - name: Build and push Booking Service
+        uses: docker/build-push-action@v6
+        with:
+          context: ./services/booking-service
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-booking:${{ github.ref_name }}
+      - name: Build and push Notification Service
+        uses: docker/build-push-action@v6
+        with:
+          context: ./services/notification-service
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-notification:${{ github.ref_name }}
+      - name: Build and push Frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-frontend:${{ github.ref_name }}
