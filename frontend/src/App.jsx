@@ -6,7 +6,7 @@ import Bookings from './pages/Bookings.jsx'
 import Service from './pages/Service.jsx'
 import Helper from './pages/Helper.jsx'
 import Profile from './pages/Profile.jsx'
-import Navbar from './components/Navbar.jsx'
+import Navbar2 from './components/Navbar2.jsx'
 import Footer from './components/Footer.jsx'
 import Container from './components/Container.jsx'
 
@@ -19,7 +19,7 @@ function RequireAuth({ children }) {
 export default function App() {
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-slate-50 to-white">
-      <Navbar />
+      <Navbar2 />
       <main className="flex-1">
         <Container className="py-6">
           <Routes>

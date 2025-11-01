@@ -10,3 +10,12 @@
 .card { @apply bg-white rounded-xl shadow-sm p-4 border border-slate-200; }
 .btn { @apply inline-flex items-center justify-center px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 text-sm font-semibold; }
 .input { @apply w-full rounded-md border-slate-300 focus:border-blue-500 focus:ring-blue-500; }
+
+/* Small UI helpers for polish */
+.badge { @apply inline-flex items-center gap-2 px-2 py-1 text-xs rounded-full bg-slate-100 text-slate-700; }
+.hero { @apply rounded-2xl p-8 md:p-12 text-white shadow; }
+.muted { @apply text-slate-500; }
+.icon-bg { @apply inline-flex items-center justify-center h-9 w-9 rounded-lg bg-blue-50 text-blue-600; }
+
+/* subtle card hover */
+.card-hover:hover { @apply shadow-md border-blue-50 transform -translate-y-0.5 transition; }
