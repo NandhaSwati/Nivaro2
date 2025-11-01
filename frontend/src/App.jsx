@@ -5,6 +5,7 @@ import Register from './pages/Register.jsx'
 import Bookings from './pages/Bookings.jsx'
 import Service from './pages/Service.jsx'
 import Helper from './pages/Helper.jsx'
+import Profile from './pages/Profile.jsx'
 import Navbar from './components/Navbar.jsx'
 import Footer from './components/Footer.jsx'
 import Container from './components/Container.jsx'
@@ -27,6 +28,7 @@ export default function App() {
             <Route path="/register" element={<Register />} />
             <Route path="/services/:id" element={<Service />} />
             <Route path="/helpers/:id" element={<Helper />} />
+            <Route path="/profile" element={<RequireAuth><Profile /></RequireAuth>} />
             <Route path="/bookings" element={<RequireAuth><Bookings /></RequireAuth>} />
           </Routes>
         </Container>

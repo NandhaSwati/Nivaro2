@@ -38,8 +38,31 @@ export async function initDb() {
       bio TEXT,
       fee_cents INTEGER NOT NULL DEFAULT 2500,
       rating REAL NOT NULL DEFAULT 4.5,
+      experience_years INTEGER NOT NULL DEFAULT 3,
+      location_text TEXT,
+      user_id INTEGER UNIQUE,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+  `);
+  await pool.query(`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns WHERE table_name='helpers' AND column_name='experience_years'
+      ) THEN
+        ALTER TABLE helpers ADD COLUMN experience_years INTEGER NOT NULL DEFAULT 3;
+      END IF;
+      IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns WHERE table_name='helpers' AND column_name='location_text'
+      ) THEN
+        ALTER TABLE helpers ADD COLUMN location_text TEXT;
+      END IF;
+      IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns WHERE table_name='helpers' AND column_name='user_id'
+      ) THEN
+        ALTER TABLE helpers ADD COLUMN user_id INTEGER UNIQUE;
+      END IF;
+    END$$;
   `);
 
   await pool.query(`
@@ -69,13 +92,25 @@ export async function initDb() {
     END$$;
   `);
 
-  // seed services if empty
-  const { rows } = await pool.query('SELECT COUNT(*)::int AS count FROM services');
-  if (rows[0].count === 0) {
-    const names = ['Plumber', 'Carpenter', 'Cleaner', 'Salon', 'Electrician', 'Painter'];
-    for (const n of names) {
-      await pool.query('INSERT INTO services (name) VALUES ($1) ON CONFLICT DO NOTHING', [n]);
-    }
+  // Listings posted by helpers (job feed)
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS listings (
+      id SERIAL PRIMARY KEY,
+      helper_id INTEGER NOT NULL REFERENCES helpers(id) ON DELETE CASCADE,
+      service_id INTEGER NOT NULL REFERENCES services(id) ON DELETE CASCADE,
+      title TEXT NOT NULL,
+      description TEXT,
+      price_cents INTEGER NOT NULL,
+      location_text TEXT,
+      active BOOLEAN NOT NULL DEFAULT true,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `);
+
+  // ensure core services exist (idempotent)
+  const coreServices = ['Plumber', 'Carpenter', 'Cleaner', 'Cook', 'Electrician', 'Painter', 'Taxi Driver']
+  for (const n of coreServices) {
+    await pool.query('INSERT INTO services (name) VALUES ($1) ON CONFLICT DO NOTHING', [n]);
   }
 
   // seed helpers if empty
@@ -90,8 +125,8 @@ export async function initDb() {
       ];
       for (const h of helpers) {
         await pool.query(
-          'INSERT INTO helpers (service_id, name, bio, fee_cents, rating) VALUES ($1,$2,$3,$4,$5)',
-          [s.id, h.name, h.bio, h.fee, h.rating]
+          'INSERT INTO helpers (service_id, name, bio, fee_cents, rating, experience_years, location_text) VALUES ($1,$2,$3,$4,$5,$6,$7)',
+          [s.id, h.name, h.bio, h.fee, h.rating, 3, 'Local City']
         );
       }
     }

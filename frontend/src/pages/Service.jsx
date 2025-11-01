@@ -1,6 +1,7 @@
 import { useParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import api from '../lib/api'
+import { inr } from '../lib/format'
 
 export default function Service() {
   const { id } = useParams()
@@ -16,7 +17,7 @@ export default function Service() {
           <Link to={`/helpers/${h.id}`} key={h.id} className="block bg-white rounded-xl border border-slate-200 p-4 shadow-sm hover:shadow">
             <div className="font-medium text-slate-800">{h.name}</div>
             <div className="text-sm text-slate-600">{h.bio}</div>
-            <div className="text-sm mt-1">Fee: ${(h.fee_cents/100).toFixed(2)}</div>
+            <div className="text-sm mt-1">Fee: {inr(h.fee_cents/100)}</div>
             <div className="text-xs text-slate-500">Rating: {h.rating.toFixed(1)}</div>
           </Link>
         ))}

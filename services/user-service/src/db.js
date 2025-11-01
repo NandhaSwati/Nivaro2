@@ -30,8 +30,34 @@ export async function initDb() {
       email TEXT UNIQUE NOT NULL,
       password_hash TEXT NOT NULL,
       role TEXT NOT NULL DEFAULT 'user',
+      address TEXT,
+      location_lat DOUBLE PRECISION,
+      location_lng DOUBLE PRECISION,
       created_at TIMESTAMP NOT NULL DEFAULT NOW()
     );
+  `);
+  await pool.query(`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name='users' AND column_name='address'
+      ) THEN
+        ALTER TABLE users ADD COLUMN address TEXT;
+      END IF;
+      IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name='users' AND column_name='location_lat'
+      ) THEN
+        ALTER TABLE users ADD COLUMN location_lat DOUBLE PRECISION;
+      END IF;
+      IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name='users' AND column_name='location_lng'
+      ) THEN
+        ALTER TABLE users ADD COLUMN location_lng DOUBLE PRECISION;
+      END IF;
+    END$$;
   `);
 }
 

@@ -35,7 +35,7 @@ export default function Bookings() {
           </select>
           <select className="input" value={helperId || ''} onChange={e=>setHelperId(e.target.value?parseInt(e.target.value):null)} disabled={!serviceId || helpersQuery.isLoading}>
             <option value="">Select helper…</option>
-            {(helpersQuery.data||[]).map(h=> <option key={h.id} value={h.id}>{h.name} — ${(h.fee_cents/100).toFixed(2)}$</option>)}
+            {(helpersQuery.data||[]).map(h=> <option key={h.id} value={h.id}>{h.name} — {new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR'}).format(h.fee_cents/100)}</option>)}
           </select>
           <input className="input" type="datetime-local" value={when} onChange={e=>setWhen(e.target.value)} />
           <textarea className="input" rows="3" placeholder="Notes (optional)" value={notes} onChange={e=>setNotes(e.target.value)} />
@@ -53,6 +53,9 @@ export default function Bookings() {
               <div className="text-sm text-slate-600">{new Date(b.scheduled_at).toLocaleString()}</div>
               {b.notes && <div className="text-sm mt-1">{b.notes}</div>}
               <div className="text-xs text-slate-400 mt-2">Status: {b.status}</div>
+              {b.status !== 'cancelled' && (
+                <button className="btn mt-2" onClick={async ()=>{ try { await api.post(`/bookings/${b.id}/cancel`); qc.invalidateQueries({ queryKey: ['bookings'] }) } catch {} }}>Cancel</button>
+              )}
             </div>
           ))}
           {(!bookings || bookings.length===0) && <p className="text-gray-500">No bookings yet.</p>}

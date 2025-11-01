@@ -11,7 +11,7 @@ const app = express();
 const PORT = process.env.PORT || 4001;
 const JWT_SECRET = process.env.JWT_SECRET || 'change_me';
 
-app.use(cors());
+app.use(cors({ origin: process.env.CORS_ORIGIN || 'http://localhost:5173', credentials: true }));
 app.use(express.json());
 app.use(morgan('dev'));
 
@@ -24,17 +24,18 @@ function signToken(user) {
 
 app.post('/auth/register', async (req, res) => {
   try {
-    let { name, email, password, role = 'user' } = req.body || {};
+    let { name, email, password, role = 'user', address = null } = req.body || {};
     name = (name || '').trim();
     email = (email || '').trim().toLowerCase();
     password = (password || '').trim();
+    address = (address || '').trim() || null;
     if (!name || !email || !password) return res.status(400).json({ error: 'Missing fields' });
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return res.status(400).json({ error: 'Invalid email' });
     if (password.length < 6) return res.status(400).json({ error: 'Password too short' });
     const hash = await bcrypt.hash(password, 10);
     const { rows } = await pool.query(
-      'INSERT INTO users (name, email, password_hash, role) VALUES ($1,$2,$3,$4) RETURNING id,name,email,role,created_at',
-      [name, email, hash, role]
+      'INSERT INTO users (name, email, password_hash, role, address) VALUES ($1,$2,$3,$4,$5) RETURNING id,name,email,role,address,created_at',
+      [name, email, hash, role, address]
     );
     const user = rows[0];
     const token = signToken(user);
@@ -72,9 +73,35 @@ app.get('/users/me', async (req, res) => {
     const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
     if (!token) return res.status(401).json({ error: 'Missing token' });
     const payload = jwt.verify(token, JWT_SECRET);
-    const { rows } = await pool.query('SELECT id,name,email,role,created_at FROM users WHERE id=$1', [payload.sub]);
+    const { rows } = await pool.query('SELECT id,name,email,role,address,location_lat,location_lng,created_at FROM users WHERE id=$1', [payload.sub]);
     const me = rows[0];
     res.json({ user: me });
+  } catch (e) {
+    res.status(401).json({ error: 'Invalid token' });
+  }
+});
+
+app.put('/users/me', async (req, res) => {
+  try {
+    const auth = req.headers['authorization'] || '';
+    const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
+    if (!token) return res.status(401).json({ error: 'Missing token' });
+    const payload = jwt.verify(token, JWT_SECRET);
+    const { address = undefined, location_lat = undefined, location_lng = undefined } = req.body || {};
+    const fields = [];
+    const values = [];
+    if (typeof address !== 'undefined') { fields.push('address'); values.push(address || null); }
+    if (typeof location_lat !== 'undefined') { fields.push('location_lat'); values.push(location_lat); }
+    if (typeof location_lng !== 'undefined') { fields.push('location_lng'); values.push(location_lng); }
+    if (fields.length === 0) {
+      const { rows } = await pool.query('SELECT id,name,email,role,address,location_lat,location_lng,created_at FROM users WHERE id=$1', [payload.sub]);
+      return res.json({ user: rows[0] });
+    }
+    const sets = fields.map((f, i) => `${f}=$${i+1}`).join(',');
+    values.push(payload.sub);
+    await pool.query(`UPDATE users SET ${sets} WHERE id=$${values.length}`, values);
+    const { rows } = await pool.query('SELECT id,name,email,role,address,location_lat,location_lng,created_at FROM users WHERE id=$1', [payload.sub]);
+    res.json({ user: rows[0] });
   } catch (e) {
     res.status(401).json({ error: 'Invalid token' });
   }

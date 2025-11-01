@@ -8,10 +8,11 @@ export default function Register() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [role, setRole] = useState('user')
+  const [address, setAddress] = useState('')
   const navigate = useNavigate()
   const mut = useMutation({
-    mutationFn: async () => (await api.post('/auth/register', { name, email, password, role })).data,
-    onSuccess: (d) => { localStorage.setItem('token', d.token); navigate('/') }
+    mutationFn: async () => (await api.post('/auth/register', { name, email, password, role, address })).data,
+    onSuccess: (d) => { localStorage.setItem('token', d.token); window.dispatchEvent(new Event('token-updated')); navigate('/') }
   })
   return (
     <div className="max-w-md mx-auto bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
@@ -27,6 +28,8 @@ export default function Register() {
         <input className="input" placeholder="you@example.com" value={email} onChange={e=>setEmail(e.target.value)} />
         <label className="block text-sm font-medium text-slate-700 mt-2">Password</label>
         <input type="password" className="input" placeholder="••••••••" value={password} onChange={e=>setPassword(e.target.value)} />
+        <label className="block text-sm font-medium text-slate-700 mt-2">Address (optional)</label>
+        <input className="input" placeholder="123 Main St, City" value={address} onChange={e=>setAddress(e.target.value)} />
         <div className="text-sm text-slate-700 mt-2">I am a:
           <label className="ml-2"><input type="radio" checked={role==='user'} onChange={()=>setRole('user')} /> User</label>
           <label className="ml-4"><input type="radio" checked={role==='helper'} onChange={()=>setRole('helper')} /> Helper</label>

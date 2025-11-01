@@ -6,7 +6,6 @@ const { createProxyMiddleware } = require('http-proxy-middleware');
 
 const app = express();
 app.use(cors());
-app.use(express.json());
 app.use(morgan('dev'));
 
 const PORT = process.env.PORT || 8080;
@@ -22,10 +21,18 @@ app.use((req, _res, next) => {
 
 app.get('/health', (_, res) => res.json({ ok: true }));
 
+// debug auth header for bookings
+app.use((req, _res, next) => {
+  if (req.path.startsWith('/api/bookings')) {
+    console.log('[gateway] auth hdr:', req.headers['authorization']);
+  }
+  next();
+});
+
 // JWT auth for protected /api routes (auth and services are public)
 app.use((req, res, next) => {
   const isApi = req.path.startsWith('/api');
-  const isPublic = req.path.startsWith('/api/auth') || req.path.startsWith('/api/services') || req.path.startsWith('/api/helpers');
+  const isPublic = req.path.startsWith('/api/auth') || req.path.startsWith('/api/services') || req.path.startsWith('/api/helpers') || req.path.startsWith('/api/listings');
   if (isApi && !isPublic) {
     const auth = req.headers['authorization'] || '';
     const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
@@ -35,6 +42,7 @@ app.use((req, res, next) => {
       req.user = payload;
       return next();
     } catch (e) {
+      console.error('[gateway:jwtauth]', e && e.message ? e.message : e);
       return res.status(401).json({ error: 'Invalid token' });
     }
   }
@@ -66,31 +74,37 @@ function makeProxy(target, label, pathRewrite) {
         try {
           if (req.user.sub) proxyReq.setHeader('x-user-id', String(req.user.sub));
           if (req.user.email) proxyReq.setHeader('x-user-email', req.user.email);
+          if (req.user.name) proxyReq.setHeader('x-user-name', req.user.name);
+          console.log(`[proxy:${label}] injected user headers sub=${req.user.sub} email=${req.user.email}`);
         } catch (_) {}
-      }
-      // Re-stream JSON body if it was already parsed by express.json()
-      try {
-        if (req.method !== 'GET' && req.method !== 'HEAD' && req.body && Object.keys(req.body).length) {
-          const bodyData = JSON.stringify(req.body);
-          proxyReq.setHeader('Content-Type', 'application/json');
-          proxyReq.setHeader('Content-Length', Buffer.byteLength(bodyData));
-          proxyReq.write(bodyData);
+      } else {
+        // best-effort: try to parse bearer without verifying (header only for downstream correlation)
+        const auth = req.headers['authorization'] || '';
+        const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
+        if (token) {
+          try {
+            const payload = JSON.parse(Buffer.from(token.split('.')[1] || '', 'base64').toString('utf8')) || {};
+            if (payload.sub) proxyReq.setHeader('x-user-id', String(payload.sub));
+            if (payload.email) proxyReq.setHeader('x-user-email', payload.email);
+            if (payload.name) proxyReq.setHeader('x-user-name', payload.name);
+            console.log(`[proxy:${label}] decoded JWT payload for headers sub=${payload.sub}`);
+          } catch {}
         }
-      } catch (e) {
-        console.warn(`[proxy:${label}] failed to forward body:`, e.message);
       }
+      // No body restream, we stream raw request body
     },
   });
 }
 
 // User service: auth and user profile
-app.use('/api/auth', makeProxy(USER_SERVICE_URL, 'users', (path) => '/auth' + path));
-app.use('/api/users', makeProxy(USER_SERVICE_URL, 'users', (path) => '/users' + path));
+app.use('/api/auth', makeProxy(USER_SERVICE_URL, 'users', (p, req) => '/auth' + req.url));
+app.use('/api/users', makeProxy(USER_SERVICE_URL, 'users', (p, req) => '/users' + req.url));
 
 // Booking service: services catalog and bookings
-app.use('/api/bookings', makeProxy(BOOKING_SERVICE_URL, 'bookings', (path) => '/bookings' + path));
-app.use('/api/services', makeProxy(BOOKING_SERVICE_URL, 'bookings', (path) => '/services' + path));
-app.use('/api/helpers', makeProxy(BOOKING_SERVICE_URL, 'bookings', (path) => '/helpers' + path));
+app.use('/api/bookings', makeProxy(BOOKING_SERVICE_URL, 'bookings', (p, req) => '/bookings' + req.url));
+app.use('/api/services', makeProxy(BOOKING_SERVICE_URL, 'bookings', (p, req) => '/services' + req.url));
+app.use('/api/helpers', makeProxy(BOOKING_SERVICE_URL, 'bookings', (p, req) => '/helpers' + req.url));
+app.use('/api/listings', makeProxy(BOOKING_SERVICE_URL, 'bookings', (p, req) => '/listings' + req.url));
 
 // 404 for unknown routes (JSON)
 app.use((req, res) => {

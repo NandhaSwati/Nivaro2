@@ -9,7 +9,7 @@ export default function Login() {
   const navigate = useNavigate()
   const mut = useMutation({
     mutationFn: async () => (await api.post('/auth/login', { email, password })).data,
-    onSuccess: (d) => { localStorage.setItem('token', d.token); navigate('/') }
+    onSuccess: (d) => { localStorage.setItem('token', d.token); window.dispatchEvent(new Event('token-updated')); navigate('/') }
   })
   return (
     <div className="max-w-md mx-auto bg-white rounded-2xl border border-slate-200 shadow-sm p-6">

@@ -1,9 +1,23 @@
 import { Link, NavLink } from 'react-router-dom'
+import { useEffect, useState } from 'react'
 import Container from './Container'
 
 export default function Navbar() {
-  const token = localStorage.getItem('token')
+  const [token, setToken] = useState(() => localStorage.getItem('token'))
+  useEffect(() => {
+    const refresh = () => setToken(localStorage.getItem('token'))
+    window.addEventListener('storage', refresh)
+    window.addEventListener('focus', refresh)
+    window.addEventListener('token-updated', refresh)
+    return () => {
+      window.removeEventListener('storage', refresh)
+      window.removeEventListener('focus', refresh)
+      window.removeEventListener('token-updated', refresh)
+    }
+  }, [])
   const logout = () => { localStorage.removeItem('token'); window.location.href = '/login' }
+  let initial = 'U'
+  try { initial = ((JSON.parse(atob((token||'').split('.')[1]||''))?.name) || 'U').slice(0,1).toUpperCase() } catch {}
   return (
     <header className="sticky top-0 z-40 backdrop-blur bg-white/70 border-b border-slate-200">
       <Container>
@@ -22,7 +36,12 @@ export default function Navbar() {
                 <Link className="px-3 py-2 rounded-md text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700" to="/register">Sign up</Link>
               </>
             ) : (
-              <button className="px-3 py-2 rounded-md text-sm font-semibold bg-red-600 text-white hover:bg-red-700" onClick={logout}>Logout</button>
+              <>
+                <Link to="/profile" className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-blue-600 text-white font-bold">
+                  {initial}
+                </Link>
+                <button className="px-3 py-2 rounded-md text-sm font-semibold bg-red-600 text-white hover:bg-red-700" onClick={logout}>Logout</button>
+              </>
             )}
           </div>
         </div>
